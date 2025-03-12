@@ -97,6 +97,7 @@ static inline void print_help(const char *file) {
 #ifdef ENABLE_CHISEL_DB
   printf("      --dump-db              enable database dump\n");
   printf("      --dump-select-db       select database's table to dump\n");
+  printf("      --db-path              the directory used to store the database\n");
 #endif
   printf("  -F, --flash                the flash bin file for simulation\n");
   printf("      --sim-run-ahead        let a fork of simulator run ahead of commit for perf analysis\n");
@@ -146,6 +147,7 @@ inline EmuArgs parse_args(int argc, const char *argv[]) {
     { "sim-run-ahead",     0, NULL,  0  },
     { "dump-db",           0, NULL,  0  },
     { "dump-select-db",    1, NULL,  0  },
+    { "db-path",           1, NULL,  0  },
     { "dump-coverage",     0, NULL,  0  },
     { "dump-ref-trace",    0, NULL,  0  },
     { "dump-commit-trace", 0, NULL,  0  },
@@ -212,44 +214,49 @@ inline EmuArgs parse_args(int argc, const char *argv[]) {
             args.dump_db = true;
             args.select_db = optarg;
             continue;
+          case 13:
+            args.dump_db = true;
+            args.db_path = optarg;
+            continue;
 #else
           case 11:
-          case 12: printf("[WARN] chisel db is not enabled at compile time, ignore --dump-db\n"); continue;
+          case 12:
+          case 13: printf("[WARN] chisel db is not enabled at compile time, ignore --dump-db\n"); continue;
 #endif
-          case 13:
+          case 14:
 #if VM_COVERAGE == 1
             args.dump_coverage = true;
 #else
             printf("[WARN] coverage is not enabled at compile time, ignore --dump-coverage\n");
 #endif // VM_COVERAGE
             continue;
-          case 14: args.enable_ref_trace = true; continue;
-          case 15: args.enable_commit_trace = true; continue;
-          case 16:
+          case 15: args.enable_ref_trace = true; continue;
+          case 16: args.enable_commit_trace = true; continue;
+          case 17:
             args.trace_name = optarg;
             args.trace_is_read = true;
             continue;
-          case 17:
+          case 18:
             args.trace_name = optarg;
             args.trace_is_read = false;
             continue;
-          case 18: args.footprints_name = optarg; continue;
-          case 19: args.image_as_footprints = true; continue;
-          case 20: args.linearized_name = optarg; continue;
-          case 21:
+          case 19: args.footprints_name = optarg; continue;
+          case 20: args.image_as_footprints = true; continue;
+          case 21: args.linearized_name = optarg; continue;
+          case 22:
             args.enable_waveform = true;
             args.enable_waveform_full = true;
             continue;
-          case 22: args.overwrite_nbytes = atoll_strict(optarg, "overwrite_nbytes"); continue;
-          case 23: remote_jtag_port = atoll_strict(optarg, "remote-jtag-port"); continue;
-          case 24:
+          case 23: args.overwrite_nbytes = atoll_strict(optarg, "overwrite_nbytes"); continue;
+          case 24: remote_jtag_port = atoll_strict(optarg, "remote-jtag-port"); continue;
+          case 25:
 #ifdef CONFIG_DIFFTEST_IOTRACE
             set_iotrace_name(optarg);
 #else
             printf("[WARN] iotrace is not enabled at compile time, ignore --iotrace-name");
 #endif // CONFIG_DIFFTEST_IOTRACE
             continue;
-          case 25:
+          case 26:
 #ifdef WITH_DRAMSIM3
             args.dramsim3_ini = optarg;
             continue;
@@ -258,7 +265,7 @@ inline EmuArgs parse_args(int argc, const char *argv[]) {
             exit(1);
             break;
 #endif
-          case 26:
+          case 27:
 #ifdef WITH_DRAMSIM3
             args.dramsim3_outdir = optarg;
             continue;
@@ -267,7 +274,7 @@ inline EmuArgs parse_args(int argc, const char *argv[]) {
             exit(1);
             break;
 #endif
-          case 27: args.overwrite_nbytes_autoset = true; continue;
+          case 28: args.overwrite_nbytes_autoset = true; continue;
         }
         // fall through
       default: print_help(argv[0]); exit(0);
@@ -568,7 +575,11 @@ Emulator::~Emulator() {
 #ifdef ENABLE_CHISEL_DB
   if (args.dump_db) {
     time_t now = time(NULL);
-    save_db(logdb_filename(now));
+    if (args.db_path) {
+      save_db(args.db_path);
+    } else {
+      save_db(logdb_filename(now));
+    }
   }
 #endif
 
